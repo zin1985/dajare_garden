@@ -8,8 +8,10 @@ jobs:
     if: >
       contains(github.event.issue.labels.*.name, 'pun')
     runs-on: ubuntu-latest
+    # ← ここを修正
     permissions:
-      contents: write
+      contents: write   # data/〜.json をコミットするため
+      issues: write     # コメント＆クローズ権限を追加
 
     steps:
       - uses: actions/checkout@v4
