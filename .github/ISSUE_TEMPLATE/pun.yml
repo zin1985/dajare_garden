@@ -1,8 +1,6 @@
 name: 🥢 ダジャレ投稿
 description: 名前とダジャレを入力して送信
-title: "[PUN] ${{
-  inputs.name
-}}"
+title: "[PUN] ${{ inputs.name }}"
 labels: ["pun", "user"]
 body:
   - type: input
