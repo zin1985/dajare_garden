@@ -16,7 +16,7 @@ async function loadRanking(){
   const yyyy=d.getFullYear();
   const mm=String(d.getMonth()+1).padStart(2,'0');
   const dd=String(d.getDate()).padStart(2,'0');
-  const url=`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/data/${yyyy}-${mm}-${dd}.json`;
+  const url=`https://raw.githubusercontent.com/zin1985/dajare_garden/main/data/${yyyy}-${mm}-${dd}.json`;
   try{
     const res=await fetch(url);
     if(!res.ok) throw new Error();
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded',loadRanking);
 <body>
   <h1>ダジャレバトル道場 🏆</h1>
   <p>5 分ごとに <span style="color:#f00;">Gemini</span> が参戦！ あなたの渾身のダジャレで打ち勝とう。</p>
-  <p><a href="https://github.com/{{OWNER}}/{{REPO}}/issues/new?template=pun.yml" target="_blank">▶︎ ダジャレを投稿する</a></p>
+  <p><a href="https://github.com/zin1985/dajare_garden/issues/new?template=pun.yml" target="_blank">▶︎ ダジャレを投稿する</a></p>
   <h2>本日のランキング</h2>
   <div id="rank">読み込み中…</div>
 </body>
