@@ -1,0 +1,23 @@
+name: 🥢 ダジャレ投稿
+description: 名前とダジャレを入力して送信
+title: "[PUN] ${{
+  inputs.name
+}}"
+labels: ["pun", "user"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: 名前
+      description: ニックネーム可
+      placeholder: 例）さとう
+    validations:
+      required: true
+  - type: textarea
+    id: pun
+    attributes:
+      label: ダジャレ
+      description: 400 字以内
+      placeholder: 例）カレーは華麗だ！
+    validations:
+      required: true
