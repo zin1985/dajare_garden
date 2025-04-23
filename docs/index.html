@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ダジャレバトル道場</title>
+<style>
+body{font-family:system-ui, sans-serif;margin:2rem;}
+h1{font-size:2rem;}
+#rank ol{padding-left:1.2rem;}
+</style>
+<script>
+const OWNER="{{OWNER}}";
+const REPO="{{REPO}}";
+async function loadRanking(){
+  const d=new Date();
+  const yyyy=d.getFullYear();
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const dd=String(d.getDate()).padStart(2,'0');
+  const url=`https://raw.githubusercontent.com/${OWNER}/${REPO}/main/data/${yyyy}-${mm}-${dd}.json`;
+  try{
+    const res=await fetch(url);
+    if(!res.ok) throw new Error();
+    const rows=await res.json();
+    rows.sort((a,b)=>b.score-a.score);
+    let html='<ol>';
+    rows.forEach(r=>{html+=`<li><strong>${r.score}点</strong>　${r.name}「${r.pun}」</li>`});
+    html+='</ol>';
+    document.getElementById('rank').innerHTML=html;
+  }catch(e){
+    document.getElementById('rank').textContent='まだ投稿がありません';
+  }
+}
+document.addEventListener('DOMContentLoaded',loadRanking);
+</script>
+</head>
+<body>
+  <h1>ダジャレバトル道場 🏆</h1>
+  <p>5 分ごとに <span style="color:#f00;">Gemini</span> が参戦！ あなたの渾身のダジャレで打ち勝とう。</p>
+  <p><a href="https://github.com/{{OWNER}}/{{REPO}}/issues/new?template=pun.yml" target="_blank">▶︎ ダジャレを投稿する</a></p>
+  <h2>本日のランキング</h2>
+  <div id="rank">読み込み中…</div>
+</body>
+</html>
