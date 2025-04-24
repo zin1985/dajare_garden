@@ -72,16 +72,9 @@ button:hover {
   border-bottom: 1px dashed #ccc;
   font-size: 1.05rem;
 }
-#rank li:nth-child(1) {
-  color: #d4af37;
-  font-weight: bold;
-}
-#rank li:nth-child(2) {
-  color: #c0c0c0;
-}
-#rank li:nth-child(3) {
-  color: #cd7f32;
-}
+#rank li:nth-child(1) { color: #d4af37; font-weight: bold; }
+#rank li:nth-child(2) { color: #c0c0c0; }
+#rank li:nth-child(3) { color: #cd7f32; }
 </style>
 </head>
 <body>
@@ -111,6 +104,7 @@ button:hover {
 
 <script>
 const API = 'https://dajare-issue-bot.zin1985.workers.dev';
+const PROXY = 'https://proxy-json.zin1985.workers.dev';
 const urlParams = new URLSearchParams(location.search);
 const today = new Date();
 const targetDate = urlParams.get('date') ? new Date(urlParams.get('date')) : today;
@@ -121,9 +115,9 @@ document.getElementById('dateSel').value = `${yyyy}-${mm}-${dd}`;
 document.getElementById('titleDay').textContent = `${yyyy}-${mm}-${dd} のランキング`;
 
 async function loadRanking() {
-  const url = `https://raw.githubusercontent.com/zin1985/dajare_garden/main/data/${yyyy}-${mm}-${dd}.json`;
+  const url = `${PROXY}/?date=${yyyy}-${mm}-${dd}`;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(res.status);
     const rows = await res.json();
     rows.sort((a, b) => Number(b.score) - Number(a.score));
@@ -131,12 +125,9 @@ async function loadRanking() {
       '<ol>' +
       rows.map((r, i) => {
         const medal = ['🥇', '🥈', '🥉'][i] || '';
-        return `<li>
-          ${medal} <strong>${r.score}点</strong> ${r.name}「${r.pun}」<br>
-          <small style="color:#666;">💬 ${r.comment || ''}</small>
-        </li>`;
-      }).join('') +
-      '</ol>';
+        return `<li>${medal} <strong>${r.score}点</strong> ${r.name}「${r.pun}」<br>
+        <small style="color:#666;">💬 ${r.comment || ''}</small></li>`;
+      }).join('') + '</ol>';
   } catch (e) {
     document.getElementById('rank').textContent = `${yyyy}-${mm}-${dd} の投稿はまだありません`;
   }
@@ -163,10 +154,20 @@ document.getElementById('punForm').addEventListener('submit', async e => {
 
   const msgEl = document.getElementById('msg');
   if (res.ok) {
-    msgEl.textContent = '🎉 投稿完了！採点結果が出るまで数十秒お待ち下さい。';
+    msgEl.textContent = '🎉 投稿完了！採点中…数十秒後に反映されます';
     msgEl.style.color = 'green';
     document.getElementById('pun').value = '';
-    setTimeout(loadRanking, 60_000);
+
+    let retryCount = 0;
+    const retryLoad = () => {
+      loadRanking().then(() => {
+        retryCount++;
+        if (retryCount < 6) {
+          setTimeout(retryLoad, 10000);
+        }
+      });
+    };
+    retryLoad();
   } else {
     const text = await res.text().catch(() => '-');
     msgEl.textContent = `投稿失敗: ${res.status} ${text}`;
