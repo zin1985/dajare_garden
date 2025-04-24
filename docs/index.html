@@ -131,7 +131,10 @@ async function loadRanking() {
       '<ol>' +
       rows.map((r, i) => {
         const medal = ['🥇', '🥈', '🥉'][i] || '';
-        return `<li>${medal} <strong>${r.score}点</strong> ${r.name}「${r.pun}」</li>`;
+        return `<li>
+          ${medal} <strong>${r.score}点</strong> ${r.name}「${r.pun}」<br>
+          <small style="color:#666;">💬 ${r.comment || ''}</small>
+        </li>`;
       }).join('') +
       '</ol>';
   } catch (e) {
