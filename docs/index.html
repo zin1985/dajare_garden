@@ -1,43 +1,121 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <title>ダジャレバトル道場</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{font-family:system-ui, sans-serif;margin:2rem;}
-h1{font-size:2rem;}
-#rank ol{padding-left:1.2rem;}
+body{font-family:system-ui, sans-serif;margin:2rem;max-width:720px}
+h1{font-size:1.7rem}
+input,textarea,button{font:inherit}
+label{display:block;margin:0.5rem 0 0.2rem}
+#rank ol{padding-left:1.2rem}
+#msg{color:#d00}
 </style>
-<script>
-const OWNER="zin1985";
-const REPO="dajare_garden";
-async function loadRanking(){
-  const d=new Date();
-  const yyyy=d.getFullYear();
-  const mm=String(d.getMonth()+1).padStart(2,'0');
-  const dd=String(d.getDate()).padStart(2,'0');
-  const url=`https://raw.githubusercontent.com/zin1985/dajare_garden/main/data/${yyyy}-${mm}-${dd}.json`;
-  try{
-    const res=await fetch(url);
-    if(!res.ok) throw new Error();
-    const rows=await res.json();
-    rows.sort((a,b)=>b.score-a.score);
-    let html='<ol>';
-    rows.forEach(r=>{html+=`<li><strong>${r.score}点</strong>　${r.name}「${r.pun}」</li>`});
-    html+='</ol>';
-    document.getElementById('rank').innerHTML=html;
-  }catch(e){
-    document.getElementById('rank').textContent='まだ投稿がありません';
-  }
-}
-document.addEventListener('DOMContentLoaded',loadRanking);
-</script>
 </head>
 <body>
-  <h1>ダジャレバトル道場 🏆</h1>
-  <p>5 分ごとに <span style="color:#f00;">Gemini</span> が参戦！ あなたの渾身のダジャレで打ち勝とう。</p>
-  <p><a href="https://github.com/zin1985/dajare_garden/issues/new?template=pun.yml" target="_blank">▶︎ ダジャレを投稿する</a></p>
-  <h2>本日のランキング</h2>
-  <div id="rank">読み込み中…</div>
+
+<h1>ダジャレバトル道場 🏆</h1>
+
+<!-- ★ ダジャレ投稿フォーム ------------------------------- -->
+<form id="punForm">
+  <label>名前
+    <input type="text" id="name" required>
+  </label>
+  <label>ダジャレ（400字以内）
+    <textarea id="pun" rows="4" maxlength="400" required></textarea>
+  </label>
+  <button type="submit">投稿して採点してもらう</button>
+  <span id="msg"></span>
+</form>
+<hr>
+
+<!-- ▼ 日付切替フォーム & 今日のランキング ------------------- -->
+<form id="dateForm" style="margin-bottom:1rem;">
+  <label>表示日付：
+    <input type="date" id="dateSel">
+  </label>
+  <button type="submit">表示</button>
+</form>
+
+<h2 id="titleDay"></h2>
+<div id="rank">読み込み中…</div>
+
+<script>
+/* ===== リポジトリ & トークン設定 ===== */
+const OWNER = 'zin1985';
+const REPO  = 'dajare_garden';
+
+/* ↓ デモ用パーソナルアクセストークン (public_repo scope 推奨) */
+const GH_TOKEN = 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';  // ★★ 置き換え ★★
+
+/* ===== util: 今日 or ?date=YYYY-MM-DD ===== */
+const urlParams  = new URLSearchParams(location.search);
+const today      = new Date();
+const targetDate = urlParams.get('date') ? new Date(urlParams.get('date')) : today;
+const yyyy = targetDate.getFullYear();
+const mm   = String(targetDate.getMonth()+1).padStart(2,'0');
+const dd   = String(targetDate.getDate()).padStart(2,'0');
+document.getElementById('dateSel').value = `${yyyy}-${mm}-${dd}`;
+document.getElementById('titleDay').textContent = `${yyyy}-${mm}-${dd} のランキング`;
+
+/* ===== ランキング取得 ===== */
+async function loadRanking(){
+  const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/data/${yyyy}-${mm}-${dd}.json`;
+  try{
+    const res = await fetch(url);
+    if(!res.ok) throw new Error(res.status);
+    const rows = await res.json();
+    rows.sort((a,b)=>Number(b.score)-Number(a.score));
+    document.getElementById('rank').innerHTML =
+      '<ol>'+rows.map(r=>`<li><strong>${r.score}点</strong> ${r.name}「${r.pun}」</li>`).join('')
+      +'</ol>';
+  }catch(e){
+    document.getElementById('rank').textContent = 'まだ投稿がありません';
+  }
+}
+loadRanking();
+
+/* ===== 日付切替 ===== */
+document.getElementById('dateForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const v=document.getElementById('dateSel').value;
+  if(v) location.href=`?date=${v}`;
+});
+
+/* ===== ダジャレ投稿 → GitHub Issue 作成 ===== */
+document.getElementById('punForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  const pun  = document.getElementById('pun').value.trim();
+  if(!name || !pun) return;
+
+  const body = `### 名前\n${name}\n\n### ダジャレ\n${pun}`;
+  const res  = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues`,{
+    method:'POST',
+    headers:{
+      'Authorization':`token ${GH_TOKEN}`,
+      'Accept':'application/vnd.github+json'
+    },
+    body: JSON.stringify({
+      title:`[PUN] ${name}`,
+      body,
+      labels:['pun','user']
+    })
+  });
+
+  const msgEl = document.getElementById('msg');
+  if(res.ok){
+    msgEl.textContent = '🎉 投稿完了！採点結果が出るまで数十秒お待ち下さい。';
+    msgEl.style.color = 'green';
+    document.getElementById('pun').value='';
+    setTimeout(loadRanking, 60_000);  // 1分後に再読込
+  }else{
+    const js = await res.json().catch(()=>{});
+    msgEl.textContent = '投稿失敗: '+res.status+' '+(js?.message||'');
+    msgEl.style.color = '#d00';
+  }
+});
+</script>
 </body>
 </html>
