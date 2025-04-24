@@ -26,20 +26,19 @@ with urlopen(req) as r:
     issue_body = json.load(r).get("body", "")
 
 # --------------------------------------------------
-# 3. 本文からダジャレ行を抽出
+# 3. 本文から名前とダジャレを正確に分離抽出
 # --------------------------------------------------
-lines = issue_body.splitlines()
-pun_lines = []
-for line in lines:
-    # 見出し行やラベル行を除去
-    if re.match(r'^\s*[#>*\-\*]+\s*(名前|ダジャレ)', line):
-        continue
-    if re.match(r'^\s*(名前:|ダジャレ:)', line):
-        continue
-    pun_lines.append(line)
+name = user_login  # fallback
+pun = ""
 
-pun = "\n".join(pun_lines).strip() or issue_body.strip()
-name = user_login
+# Markdown構造に従って抽出
+match_name = re.search(r"###\s*名前\s*\n(.*?)\n", issue_body, re.DOTALL)
+match_pun  = re.search(r"###\s*ダジャレ\s*\n(.*)", issue_body, re.DOTALL)
+
+if match_name:
+    name = match_name.group(1).strip()
+if match_pun:
+    pun = match_pun.group(1).strip()
 
 # --------------------------------------------------
 # 4. Gemini に採点依頼
