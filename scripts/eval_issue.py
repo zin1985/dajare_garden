@@ -7,11 +7,11 @@ user_login = sys.argv[3]
 
 # read issue content via environment
 issue_body = os.environ.get('ISSUE_BODY', '')
-name_match = re.search(r'### 名前\s*(.+)', issue_body)
-pun_match  = re.search(r'### ダジャレ\s*(.+)', issue_body, re.S)
+name_match = re.search(r'^###\s*名前\s*\r?\n+([^\r\n]+)', issue_body, re.M)
+pun_match  = re.search(r'^###\s*ダジャレ\s*\r?\n+([\s\S]+)', issue_body, re.M)
 
-name = name_match.group(1).strip() if name_match else user_login
-pun  = pun_match.group(1).strip() if pun_match else issue_body.strip()
+name = name_match.group(1).strip() if name_match else sys.argv[3]
+pun  = pun_match.group(1).strip()  if pun_match  else issue_body.strip()
 
 genai.configure(api_key=os.environ['GOOGLE_API_KEY'])
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
