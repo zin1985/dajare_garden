@@ -1,42 +1,50 @@
-import os, sys, json, re, datetime, subprocess, pathlib
-import google.generativeai as genai
+import os, sys, json, re, datetime, subprocess
+from urllib.request import Request, urlopen
 
 # --------------------------------------------------
-# 引数（Evaluate pun ワークフローから渡される）
+# 1. 引数取得
 # --------------------------------------------------
-issue_number = sys.argv[1]  # GitHub Issue 番号
-repo         = sys.argv[2]  # repo フル名 e.g. "zin1985/dajare_garden"
-user_login   = sys.argv[3]  # Issue 作成者の GitHub ID
+issue_number = sys.argv[1]  # Issue 番号
+repo         = sys.argv[2]  # "owner/repo"
+user_login   = sys.argv[3]  # 投稿者 GitHub ID
 
 # --------------------------------------------------
-# 1. イベント JSON から Issue 本文を取得（UTF-8 安全）
+# 2. GitHub REST API で本文を取得
 # --------------------------------------------------
-event_file = pathlib.Path(os.environ["GITHUB_EVENT_PATH"])
-with event_file.open(encoding="utf-8") as f:
-    body = json.load(f)["issue"]["body"]
+token = os.environ.get("GITHUB_TOKEN")
+if not token:
+    print("Error: GITHUB_TOKEN not set", file=sys.stderr)
+    sys.exit(1)
+
+url = f"https://api.github.com/repos/{repo}/issues/{issue_number}"
+req = Request(url, headers={
+    "Authorization": f"Bearer {token}",
+    "User-Agent": "dajare-issue-bot/1.0",
+    "Accept": "application/vnd.github+json"
+})
+with urlopen(req) as r:
+    issue_body = json.load(r).get("body", "")
 
 # --------------------------------------------------
-# 2. 本文行ごとにフィルタして “ダジャレ部” を取る
-#    - "名前" や "ダジャレ" の見出し行（Markdown # やラベル行）を除外
+# 3. 本文からダジャレ行を抽出
 # --------------------------------------------------
-lines = body.splitlines()
+lines = issue_body.splitlines()
 pun_lines = []
 for line in lines:
-    # 除外パターン: 見出し (#, *, >) に「名前」か「ダジャレ」が含まれる行
+    # 見出し行やラベル行を除去
     if re.match(r'^\s*[#>*\-\*]+\s*(名前|ダジャレ)', line):
         continue
-    # 除外パターン: 空行と「名前: さとう」のような行
     if re.match(r'^\s*(名前:|ダジャレ:)', line):
         continue
-    # それ以外はダジャレの可能性がある行として追加
     pun_lines.append(line)
 
-pun = "\n".join(pun_lines).strip() or body.strip()
-name = user_login  # Azure上では別途名前を取れないため GitHub ID を使用
+pun = "\n".join(pun_lines).strip() or issue_body.strip()
+name = user_login
 
 # --------------------------------------------------
-# 3. Gemini にダジャレを採点してもらう
+# 4. Gemini に採点依頼
 # --------------------------------------------------
+import google.generativeai as genai
 genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 model = genai.GenerativeModel("gemini-1.5-pro-latest")
 
@@ -45,33 +53,30 @@ prompt = (
     "数値だけ返してください。\n\n" + pun
 )
 resp = model.generate_content(prompt)
-m    = re.search(r"\d+", resp.text)
+m = re.search(r"\d+", resp.text)
 score = int(m.group(0)) if m else 50
 
 # --------------------------------------------------
-# 4. data/YYYY-MM-DD.json に追記
+# 5. JSON に記録
 # --------------------------------------------------
 today = datetime.date.today().isoformat()
 path  = f"data/{today}.json"
 os.makedirs("data", exist_ok=True)
 
-data = []
+records = []
 if os.path.exists(path):
     with open(path, encoding="utf-8") as f:
-        data = json.load(f)
+        records = json.load(f)
 
-data.append({"name": name, "pun": pun, "score": score})
+records.append({"name": name, "pun": pun, "score": score})
 with open(path, "w", encoding="utf-8") as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
+    json.dump(records, f, ensure_ascii=False, indent=2)
 
 # --------------------------------------------------
-# 5. GitHub にコミット & プッシュ
+# 6. コミット&プッシュ
 # --------------------------------------------------
 subprocess.run(["git", "config", "user.name", "github-actions"])
 subprocess.run(["git", "config", "user.email", "actions@github.com"])
 subprocess.run(["git", "add", path])
-subprocess.run(
-    ["git", "commit", "-m", f"Add pun from issue #{issue_number}"],
-    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-)
+subprocess.run(["git", "commit", "-m", f"Add pun from issue #{issue_number}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 subprocess.run(["git", "push"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
