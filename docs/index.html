@@ -5,7 +5,7 @@
 <title>ダジャレバトル道場</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{font-family:system-ui, sans-serif;margin:2rem;max-width:720px}
+body{font-family:system-ui,sans-serif;margin:2rem;max-width:720px}
 h1{font-size:1.7rem}
 input,textarea,button{font:inherit}
 label{display:block;margin:0.5rem 0 0.2rem}
@@ -42,36 +42,31 @@ label{display:block;margin:0.5rem 0 0.2rem}
 <div id="rank">読み込み中…</div>
 
 <script>
-/* ===== リポジトリ & トークン設定 ===== */
-const OWNER = 'zin1985';
-const REPO  = 'dajare_garden';
+/* ===== API エンドポイント (Cloudflare Worker) ===== */
+const API = 'https://dajare-issue-bot.<YOUR-ACCOUNT>.workers.dev';  // ★ あなたの URL に置換
 
-/* ↓ デモ用パーソナルアクセストークン (public_repo scope 推奨) */
-const GH_TOKEN = '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';  // ★★ 置き換え ★★
-
-/* ===== util: 今日 or ?date=YYYY-MM-DD ===== */
+/* ===== 日付ユーティリティ ===== */
 const urlParams  = new URLSearchParams(location.search);
 const today      = new Date();
 const targetDate = urlParams.get('date') ? new Date(urlParams.get('date')) : today;
-const yyyy = targetDate.getFullYear();
-const mm   = String(targetDate.getMonth()+1).padStart(2,'0');
-const dd   = String(targetDate.getDate()).padStart(2,'0');
-document.getElementById('dateSel').value = `${yyyy}-${mm}-${dd}`;
-document.getElementById('titleDay').textContent = `${yyyy}-${mm}-${dd} のランキング`;
+const yyyy=targetDate.getFullYear();
+const mm=String(targetDate.getMonth()+1).padStart(2,'0');
+const dd=String(targetDate.getDate()).padStart(2,'0');
+document.getElementById('dateSel').value=`${yyyy}-${mm}-${dd}`;
+document.getElementById('titleDay').textContent=`${yyyy}-${mm}-${dd} のランキング`;
 
 /* ===== ランキング取得 ===== */
 async function loadRanking(){
-  const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/data/${yyyy}-${mm}-${dd}.json`;
+  const url=`https://raw.githubusercontent.com/zin1985/dajare_garden/main/data/${yyyy}-${mm}-${dd}.json`;
   try{
-    const res = await fetch(url);
+    const res=await fetch(url);
     if(!res.ok) throw new Error(res.status);
-    const rows = await res.json();
+    const rows=await res.json();
     rows.sort((a,b)=>Number(b.score)-Number(a.score));
-    document.getElementById('rank').innerHTML =
-      '<ol>'+rows.map(r=>`<li><strong>${r.score}点</strong> ${r.name}「${r.pun}」</li>`).join('')
-      +'</ol>';
+    document.getElementById('rank').innerHTML=
+      '<ol>'+rows.map(r=>`<li><strong>${r.score}点</strong> ${r.name}「${r.pun}」</li>`).join('')+'</ol>';
   }catch(e){
-    document.getElementById('rank').textContent = 'まだ投稿がありません';
+    document.getElementById('rank').textContent=`${yyyy}-${mm}-${dd} の投稿はまだありません`;
   }
 }
 loadRanking();
@@ -83,37 +78,29 @@ document.getElementById('dateForm').addEventListener('submit',e=>{
   if(v) location.href=`?date=${v}`;
 });
 
-/* ===== ダジャレ投稿 → GitHub Issue 作成 ===== */
+/* ===== ダジャレ投稿 → Worker 経由で GitHub Issue 作成 ===== */
 document.getElementById('punForm').addEventListener('submit',async e=>{
   e.preventDefault();
-  const name = document.getElementById('name').value.trim();
-  const pun  = document.getElementById('pun').value.trim();
-  if(!name || !pun) return;
+  const name=document.getElementById('name').value.trim();
+  const pun =document.getElementById('pun').value.trim();
+  if(!name||!pun) return;
 
-  const body = `### 名前\n${name}\n\n### ダジャレ\n${pun}`;
-  const res  = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues`,{
+  const res=await fetch(API,{
     method:'POST',
-    headers:{
-      'Authorization':`Bearer ${GH_TOKEN}`,
-      'Accept':'application/vnd.github+json'
-    },
-    body: JSON.stringify({
-      title:`[PUN] ${name}`,
-      body,
-      labels:['pun','user']
-    })
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name, pun})
   });
 
-  const msgEl = document.getElementById('msg');
+  const msgEl=document.getElementById('msg');
   if(res.ok){
-    msgEl.textContent = '🎉 投稿完了！採点結果が出るまで数十秒お待ち下さい。';
-    msgEl.style.color = 'green';
+    msgEl.textContent='🎉 投稿完了！採点結果が出るまで数十秒お待ち下さい。';
+    msgEl.style.color='green';
     document.getElementById('pun').value='';
-    setTimeout(loadRanking, 60_000);  // 1分後に再読込
+    setTimeout(loadRanking,60_000);  // 1 分後に再読込
   }else{
-    const js = await res.json().catch(()=>{});
-    msgEl.textContent = '投稿失敗: '+res.status+' '+(js?.message||'');
-    msgEl.style.color = '#d00';
+    const text=await res.text().catch(()=>'-');
+    msgEl.textContent=`投稿失敗: ${res.status} ${text}`;
+    msgEl.style.color='#d00';
   }
 });
 </script>
