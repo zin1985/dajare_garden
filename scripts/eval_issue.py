@@ -85,7 +85,7 @@ if os.path.exists(path):
     with open(path, encoding="utf-8") as f:
         records = json.load(f)
 
-records.append({"name": name, "pun": pun, "score": score})
+records.append({"name": name, "pun": pun, "score": score}, "comment": comment})
 with open(path, "w", encoding="utf-8") as f:
     json.dump(records, f, ensure_ascii=False, indent=2)
 
