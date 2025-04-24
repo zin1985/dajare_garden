@@ -40,7 +40,9 @@ score_prompt = (
 
 score_resp = model.generate_content(score_prompt)
 m = re.search(r'\d+', score_resp.text)
-score = int(m.group(0)) if m else 50
+lines = score_resp.text.strip().splitlines()
+score = int(re.search(r"\d+", lines[0]).group(0))
+comment = lines[1].strip() if len(lines) > 1 else ""
 
 today = datetime.date.today().isoformat()
 path = f"data/{today}.json"
@@ -48,7 +50,7 @@ os.makedirs('data', exist_ok=True)
 data = []
 if os.path.exists(path):
     data = json.load(open(path, encoding='utf-8'))
-data.append({'name':'Gemini','pun':pun,'score':score})
+data.append({'name':'Gemini','pun':pun,'score':score,'comment':comment})
 with open(path, 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
 
