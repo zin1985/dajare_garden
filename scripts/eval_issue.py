@@ -69,8 +69,9 @@ score_prompt = (
     f"ダジャレ：\n{pun}"
 )
 resp = model.generate_content(score_prompt)
-m = re.search(r"\d+", resp.text)
-score = int(m.group(0)) if m else 50
+lines = resp.text.strip().splitlines()
+score = int(re.search(r"\d+", lines[0]).group(0))
+comment = lines[1].strip() if len(lines) > 1 else ""
 
 # --------------------------------------------------
 # 5. JSON に記録
