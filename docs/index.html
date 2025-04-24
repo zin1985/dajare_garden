@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ダジャレバトル道場</title>
+<title>Dajare Garden</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body{font-family:system-ui,sans-serif;margin:2rem;max-width:720px}
@@ -15,15 +15,16 @@ label{display:block;margin:0.5rem 0 0.2rem}
 </head>
 <body>
 
-<h1>ダジャレバトル道場 🏆</h1>
+<h1>Dajare Garden 🏆</h1>
 
 <!-- ★ ダジャレ投稿フォーム ------------------------------- -->
 <form id="punForm">
   <label>名前
     <input type="text" id="name" required>
   </label>
-  <textarea id="pun" rows="4" maxlength="400" required></textarea>
-  <label>ダジャレ（400字以内）</label>
+  <label>ダジャレ（400字以内）
+    <textarea id="pun" rows="4" maxlength="400" required></textarea>
+  </label>
   <button type="submit">投稿して採点してもらう</button>
   <span id="msg"></span>
 </form>
