@@ -48,10 +48,6 @@ import google.generativeai as genai
 genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 model = genai.GenerativeModel("gemini-1.5-pro-latest")
 
-prompt = (
-    "あなたはダジャレ評論家です。次の日本語ダジャレを100点満点で"
-    "数値だけ返してください。\n\n" + pun
-)
 score_prompt = (
     "あなたは熟練のダジャレ評論家です。以下のダジャレを見て、以下の基準に従って厳密に100点満点で採点してください。\n\n"
     "評価基準：\n"
@@ -72,7 +68,7 @@ score_prompt = (
     "コメント（例: 語呂のインパクトはあるが少しベタ）\n\n"
     f"ダジャレ：\n{pun}"
 )
-resp = model.generate_content(prompt)
+resp = model.generate_content(score_prompt)
 m = re.search(r"\d+", resp.text)
 score = int(m.group(0)) if m else 50
 
