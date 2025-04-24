@@ -1,7 +1,7 @@
 name: Gemini auto pun
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 jobs:
